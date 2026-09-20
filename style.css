@@ -1,0 +1,247 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    width: 90%;
+    max-width: 960px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+p {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #7f8c8d;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.controls label {
+    color: #2c3e50;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.control-group[hidden] {
+    display: none;
+}
+
+#movie-select,
+#user-select,
+#similarity-select {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #f9f9f9;
+    transition: border-color 0.3s;
+}
+
+#movie-select:focus,
+#user-select:focus,
+#similarity-select:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+#recommend-btn {
+    padding: 12px 20px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#recommend-btn:hover {
+    background-color: #2980b9;
+}
+
+#result-box {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    border-left: 4px solid #3498db;
+}
+
+#result {
+    font-weight: bold;
+    color: #2c3e50;
+    text-align: left;
+    margin: 0;
+}
+
+#result .recommendation-intro {
+    color: inherit;
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+#result .profile-source {
+    color: #52606d;
+    font-size: 14px;
+    font-weight: normal;
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+#result .recommendation-list {
+    padding-left: 24px;
+}
+
+#result .recommendation-list li {
+    margin-bottom: 8px;
+}
+
+#result .recommendation-list li:last-child {
+    margin-bottom: 0;
+}
+
+#result.comparison-result {
+    color: #2c3e50;
+}
+
+#result .comparison-protocol,
+#result .comparison-summary {
+    color: #52606d;
+    font-size: 14px;
+    font-weight: normal;
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.comparison-card {
+    background: #fff;
+    border: 1px solid #dfe6e9;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.comparison-card h2 {
+    color: #2c3e50;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+#result .comparison-source {
+    color: #52606d;
+    font-size: 13px;
+    font-weight: normal;
+    min-height: 64px;
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+#result .comparison-outcome {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 3px 9px;
+    margin-bottom: 12px;
+}
+
+#result .comparison-target-evaluation {
+    background: #eef5fb;
+    border-left: 3px solid #3498db;
+    color: #2c3e50;
+    font-size: 13px;
+    font-weight: normal;
+    padding: 8px 10px;
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+#result .comparison-outcome.hit {
+    background: #d5f5e3;
+    color: #196f3d;
+}
+
+#result .comparison-outcome.miss {
+    background: #fdebd0;
+    color: #9c640c;
+}
+
+#result .comparison-list {
+    font-size: 14px;
+    font-weight: normal;
+}
+
+#result .held-out-hit {
+    color: #196f3d;
+    font-weight: bold;
+}
+
+.target-label {
+    background: #d5f5e3;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 2px 5px;
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .comparison-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #result .comparison-source {
+        min-height: auto;
+    }
+}
+
+.loading {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.error {
+    color: #e74c3c;
+}
+
+.success {
+    color: #27ae60;
+}

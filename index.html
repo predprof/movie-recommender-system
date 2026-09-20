@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content-Based Movie Recommender</title>
+    <link rel="stylesheet" href="style.css?v=20260920-2">
+</head>
+<body>
+    <div class="container">
+        <h1>Content-Based Movie Recommender</h1>
+        <p>Choose a method, then select a movie or a MovieLens user.</p>
+        
+        <div class="controls">
+            <label for="similarity-select">Recommendation method</label>
+            <select id="similarity-select">
+                <option value="cosine" selected>Cosine similarity</option>
+                <option value="jaccard">Jaccard similarity</option>
+                <option value="profile">Profile-based cosine (top 3 ratings)</option>
+                <option value="compare">Experiment: single item vs. profile (5-star holdout)</option>
+            </select>
+
+            <div id="movie-control" class="control-group">
+                <label for="movie-select">Movie</label>
+                <select id="movie-select">
+                    <option value="" disabled selected>Select a movie</option>
+                </select>
+            </div>
+
+            <div id="user-control" class="control-group" hidden>
+                <label for="user-select">MovieLens user</label>
+                <select id="user-select">
+                    <option value="" disabled selected>Select a user</option>
+                </select>
+            </div>
+
+            <button id="recommend-btn" onclick="getRecommendations()">Get Recommendations</button>
+        </div>
+        
+        <div id="result-box">
+            <div id="result">Please wait, loading data...</div>
+        </div>
+    </div>
+
+    <script src="data.js?v=20260920-2"></script>
+    <script src="script.js?v=20260920-2"></script>
+</body>
+</html>
