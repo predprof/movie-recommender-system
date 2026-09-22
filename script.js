@@ -1,5 +1,5 @@
 const PROFILE_MOVIE_COUNT = 3;
-const PROFILE_RECOMMENDATION_COUNT = 5;
+const TOP_RECOMMENDATION_COUNT = 5;
 const COMPARISON_HELD_OUT_RATING = 5;
 
 // Use engine-independent code-point ordering instead of locale-sensitive collation.
@@ -220,7 +220,7 @@ function getProfileRecommendations(userId) {
             compareTitles(a.title, b.title) ||
             a.id - b.id
         )
-        .slice(0, PROFILE_RECOMMENDATION_COUNT);
+        .slice(0, TOP_RECOMMENDATION_COUNT);
 
     return { profileMovies, recommendations };
 }
@@ -308,8 +308,8 @@ function getComparisonRecommendations(userId) {
         trainingMovieIds,
         profileScoreMovie
     );
-    const itemRecommendations = itemRanking.slice(0, PROFILE_RECOMMENDATION_COUNT);
-    const profileRecommendations = profileRanking.slice(0, PROFILE_RECOMMENDATION_COUNT);
+    const itemRecommendations = itemRanking.slice(0, TOP_RECOMMENDATION_COUNT);
+    const profileRecommendations = profileRanking.slice(0, TOP_RECOMMENDATION_COUNT);
     const itemTargetEvaluation = getTargetEvaluation(
         itemRanking,
         heldOutMovie,
@@ -473,8 +473,8 @@ function displayComparison(resultElement, userId, comparison) {
     summary.className = 'comparison-summary';
     summary.textContent =
         `Shared recommendations: ${comparison.overlapCount} of ` +
-        `${PROFILE_RECOMMENDATION_COUNT} ` +
-        `(${((comparison.overlapCount / PROFILE_RECOMMENDATION_COUNT) * 100).toFixed(1)}%).`;
+        `${TOP_RECOMMENDATION_COUNT} ` +
+        `(${((comparison.overlapCount / TOP_RECOMMENDATION_COUNT) * 100).toFixed(1)}%).`;
     resultElement.appendChild(summary);
     resultElement.className = 'success comparison-result';
 }
@@ -597,7 +597,7 @@ function getRecommendations() {
                 );
                 
                 // Step 6: Select top recommendations
-                const topRecommendations = scoredMovies.slice(0, 2);
+                const topRecommendations = scoredMovies.slice(0, TOP_RECOMMENDATION_COUNT);
                 
                 // Step 7: Display results
                 if (topRecommendations.length > 0) {
