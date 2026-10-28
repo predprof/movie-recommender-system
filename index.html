@@ -1,48 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content-Based Movie Recommender</title>
-    <link rel="stylesheet" href="style.css?v=20260920-2">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HW6 — Graph-Based Recommendations with Personalized PageRank</title>
+  <link rel="stylesheet" href="style.css?v=20261020-control-actions">
 </head>
 <body>
-    <div class="container">
-        <h1>Content-Based Movie Recommender</h1>
-        <p>Choose a method, then select a movie or a MovieLens user.</p>
-        
-        <div class="controls">
-            <label for="similarity-select">Recommendation method</label>
-            <select id="similarity-select">
-                <option value="cosine" selected>Cosine similarity</option>
-                <option value="jaccard">Jaccard similarity</option>
-                <option value="profile">Profile-based cosine (top 3 ratings)</option>
-                <option value="compare">Experiment: single item vs. profile (5-star holdout)</option>
-            </select>
+  <noscript>
+    <p class="load-error">JavaScript required — please enable scripts for this directory and reload.</p>
+  </noscript>
 
-            <div id="movie-control" class="control-group">
-                <label for="movie-select">Movie</label>
-                <select id="movie-select">
-                    <option value="" disabled selected>Select a movie</option>
-                </select>
-            </div>
+  <header class="site-header">
+    <h1>Graph-Based Recommendations with Personalized PageRank</h1>
+    <p class="subtitle">HW6 assignment: build a user–movie bipartite graph, propagate personalized PageRank with TensorFlow.js, and compare popularity, global PageRank, PPR and matrix factorization on a shared evaluation cohort.</p>
+    <p class="note">The graph is built from positive training interactions only; an unobserved rating is missing data, not a zero.</p>
+  </header>
 
-            <div id="user-control" class="control-group" hidden>
-                <label for="user-select">MovieLens user</label>
-                <select id="user-select">
-                    <option value="" disabled selected>Select a user</option>
-                </select>
-            </div>
-
-            <button id="recommend-btn" onclick="getRecommendations()">Get Recommendations</button>
-        </div>
-        
-        <div id="result-box">
-            <div id="result">Please wait, loading data...</div>
-        </div>
+  <main>
+    <div class="workspace-tabs" role="tablist" aria-label="App workspaces">
+      <button type="button" id="main-tab" role="tab" aria-selected="true" aria-controls="main-workspace">Main operations &amp; recommendations</button>
+      <button type="button" id="fixture-tab" role="tab" aria-selected="false" aria-controls="fixture-workspace" tabindex="-1">Study fixture</button>
     </div>
 
-    <script src="data.js?v=20260920-2"></script>
-    <script src="script.js?v=20260922-1"></script>
+    <div id="main-workspace" class="workspace-panel" role="tabpanel" aria-labelledby="main-tab">
+      <section aria-labelledby="tf-status-heading" class="panel">
+        <h2 id="tf-status-heading">TensorFlow.js status</h2>
+        <p id="tf-status" class="status-line" role="status" aria-live="polite">Loading TensorFlow.js…</p>
+        <p id="backend-note" class="hint" role="status" aria-live="polite">No backend reported yet. Backend and runtime are recorded, not compared across devices.</p>
+      </section>
+
+      <section aria-labelledby="dataset-summary-heading" class="panel">
+        <h2 id="dataset-summary-heading">Dataset summary</h2>
+        <div id="dataset-summary-body" role="status" aria-live="polite">
+          <p class="empty-state">Loading dataset…</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="graph-summary-heading" class="panel">
+        <h2 id="graph-summary-heading">Graph summary</h2>
+        <div id="graph-summary-body" role="status" aria-live="polite">
+          <p class="empty-state">No graph yet. Press “Build graph” to report nodes, edges, zero-degree users, zero-degree movies and positive training interactions.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="controls-heading" class="panel">
+        <h2 id="controls-heading">Controls</h2>
+
+        <div class="control-grid control-grid--two">
+          <div class="control">
+            <div class="control-label">
+              <label for="alpha">Personalization alpha (link-following probability)</label>
+              <button type="button" class="control-help-button" aria-label="About personalization alpha" aria-controls="alpha-help" aria-describedby="alpha-help" aria-expanded="false">?</button>
+              <span id="alpha-help" class="control-help-tooltip" role="tooltip" hidden>1 - alpha is the restart probability. Validation sweeps 0.50, 0.70, 0.85 and 0.95.</span>
+            </div>
+            <div class="alpha-row">
+              <input type="range" id="alpha" name="alpha" aria-describedby="alpha-help" min="0.50" max="0.95" step="0.05" value="0.85">
+              <output id="alpha-value" class="alpha-value" for="alpha">0.85</output>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-label">
+              <label for="method">Method</label>
+              <button type="button" class="control-help-button" aria-label="About recommendation method" aria-controls="method-help" aria-describedby="method-help" aria-expanded="false">?</button>
+              <span id="method-help" class="control-help-tooltip" role="tooltip" hidden>Popularity counts distinct users with a positive training rating; pagerank uses a uniform restart; ppr restarts at the target user; mf trains a standalone matrix-factorization baseline and selects its checkpoint by validation RMSE.</span>
+            </div>
+            <select id="method" name="method" aria-describedby="method-help">
+              <option value="popularity">popularity</option>
+              <option value="pagerank">pagerank</option>
+              <option value="ppr">ppr</option>
+              <option value="mf">mf</option>
+            </select>
+          </div>
+
+          <div class="control">
+            <div class="control-label">
+              <label for="user-select">Target user (recommendations)</label>
+              <button type="button" class="control-help-button" aria-label="About target user" aria-controls="user-select-help" aria-describedby="user-select-help" aria-expanded="false">?</button>
+              <span id="user-select-help" class="control-help-tooltip" role="tooltip" hidden>Drawn from the common evaluation cohort.</span>
+            </div>
+            <select id="user-select" name="user-select" aria-describedby="user-select-help">
+              <option value="">Loading users…</option>
+            </select>
+            <div class="button-row control-actions" role="group" aria-label="Recommendation actions">
+              <button type="button" id="recommend-btn" class="secondary">Recommend Top-10</button>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-label">
+              <label for="seed-user-select">Restart user (PPR and graph)</label>
+              <button type="button" class="control-help-button" aria-label="About restart user" aria-controls="seed-user-select-help" aria-describedby="seed-user-select-help" aria-expanded="false">?</button>
+              <span id="seed-user-select-help" class="control-help-tooltip" role="tooltip" hidden>Choose a restart user here or click a user node in the graph.</span>
+            </div>
+            <select id="seed-user-select" name="seed-user-select" aria-describedby="seed-user-select-help">
+              <option value="">Loading users…</option>
+            </select>
+            <div class="button-row control-actions" role="group" aria-label="Graph actions">
+              <button type="button" id="build-graph">Build graph</button>
+              <button type="button" id="run-pagerank" class="secondary">Run PageRank</button>
+              <button type="button" id="run-ppr" class="secondary">Run PPR</button>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="control-label">
+              <label for="max-nodes">Max nodes in graph view</label>
+              <button type="button" class="control-help-button" aria-label="About maximum graph nodes" aria-controls="max-nodes-help" aria-describedby="max-nodes-help" aria-expanded="false">?</button>
+              <span id="max-nodes-help" class="control-help-tooltip" role="tooltip" hidden>Upper bound on nodes drawn in the ego subgraph.</span>
+            </div>
+            <input type="number" id="max-nodes" name="max-nodes" aria-describedby="max-nodes-help" value="120" min="10" step="1" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="evaluation-actions">
+          <div class="button-row" role="group" aria-label="Evaluation actions">
+            <button type="button" id="alpha-sweep-btn" class="secondary" title="Run the validation alpha sweep">Run alpha sweep (validation)</button>
+            <button type="button" id="recall-btn" class="secondary" title="Evaluate Recall@10 for all four methods">Evaluate Recall@10 — all four methods</button>
+          </div>
+          <div class="button-row">
+            <button type="button" id="two-user-demo-btn" class="secondary" title="Compare restart users and alpha values">Run two-user demo (alpha / seed)</button>
+          </div>
+        </div>
+
+        <p class="hint">Controls stay enabled only when the step they depend on is available; a disabled control is reported in the status line.</p>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite">Loading…</p>
+
+      <section aria-labelledby="graph-view-heading" class="panel">
+        <h2 id="graph-view-heading">Graph view</h2>
+
+        <div id="graph-controls" class="graph-controls" role="group" aria-label="Movie graph controls">
+          <p class="empty-state">Graph controls appear here once the graph is built.</p>
+        </div>
+
+        <div class="graph-scroll" tabindex="0" role="region" aria-label="Scrollable graph with movie titles">
+          <svg id="graph-view" class="graph-view" role="img" aria-label="Training user–movie graph coloured by degree or the selected recommendation scores."></svg>
+        </div>
+
+        <div id="graph-legend" class="graph-legend">
+          <p class="empty-state">Legend appears after the first render.</p>
+        </div>
+
+        <p class="caption">Click a user node to show their neighbourhood and select them as the restart user. With PPR selected, scores refresh for that user. Clicking the selected user keeps the current view.</p>
+      </section>
+
+      <section aria-labelledby="convergence-heading" class="panel">
+        <h2 id="convergence-heading">Convergence</h2>
+        <div id="convergence-results" role="status" aria-live="polite">
+          <p class="empty-state">Run PageRank or PPR to record the iteration count, the final residual and whether convergence was reached (cap 500 iterations, tolerance 1e-6).</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="alpha-sweep-heading" class="panel">
+        <h2 id="alpha-sweep-heading">Alpha sweep</h2>
+        <div id="alpha-sweep-results" role="status" aria-live="polite">
+          <p class="empty-state">Validation Recall@10 for alpha in {0.50, 0.70, 0.85, 0.95} is reported here; exact ties are broken by the smaller alpha.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="comparison-heading" class="panel">
+        <h2 id="comparison-heading">Method comparison</h2>
+        <div id="comparison-results" role="status" aria-live="polite">
+          <p class="empty-state">Recall@10 for the shared cohort across popularity, global PageRank, PPR and MF is compared here.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="two-user-demo-heading" class="panel">
+        <h2 id="two-user-demo-heading">Two-user one-factor demonstration</h2>
+        <div id="two-user-demo-results" role="status" aria-live="polite" aria-labelledby="two-user-demo-heading">
+          <p class="empty-state">No demonstration yet. Press “Run two-user demo (alpha / seed)” to compare the three readme §6.2 settings.</p>
+        </div>
+        <p class="caption">Shows the readme §6.2 settings: baseline user A at alpha = 0.85; seed changed to user B at alpha = 0.85; alpha changed to 0.50 for user A.</p>
+      </section>
+
+      <section aria-labelledby="recommendations-heading" class="panel">
+        <h2 id="recommendations-heading">Recommendations</h2>
+        <div id="recommendations" role="status" aria-live="polite">
+          <p class="empty-state">No recommendations yet. Build the graph, then press “Recommend Top-10”.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="recall-heading" class="panel">
+        <h2 id="recall-heading">Retrieval evaluation</h2>
+        <div id="recall-results" role="status" aria-live="polite">
+          <p class="empty-state">Recall@10 for the common evaluation cohort, plus the reported exclusions, appears here.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="self-checks-heading" class="panel">
+        <h2 id="self-checks-heading">Self-checks</h2>
+        <div class="button-row">
+          <button type="button" id="run-tests" class="secondary">Run tests</button>
+        </div>
+        <p class="hint">Run tests checks graph construction, probability propagation, ranking, recall, and batched PPR.</p>
+        <pre id="self-checks" class="test-log" tabindex="0" aria-label="Self-check log">Press “Run tests” to execute the self-checks.</pre>
+      </section>
+
+      <section aria-labelledby="exports-heading" class="panel">
+        <h2 id="exports-heading">Exports</h2>
+        <div class="button-row">
+          <button type="button" id="export-verification" class="secondary">Export verification</button>
+          <button type="button" id="export-results" class="secondary">Export results</button>
+          <button type="button" id="export-recommendations" class="secondary">Export recommendations</button>
+        </div>
+        <p class="caption">Downloads: <code class="filename">verification.json</code> (machine-readable test results), <code class="filename">results.csv</code> (retrieval metrics, common-cohort size, exclusions, selected settings) and <code class="filename">recommendations.csv</code> (user ID, method, alpha, rank, movie ID, title, genres, score, training popularity).</p>
+      </section>
+    </div>
+
+    <div id="fixture-workspace" class="workspace-panel" role="tabpanel" aria-labelledby="fixture-tab" hidden>
+      <section class="panel" aria-labelledby="fixture-heading">
+        <h2 id="fixture-heading">Study example: four-node fixture</h2>
+        <p class="hint">Follow one probability update at a time. These controls keep their own alpha and restart choice.</p>
+        <div class="control-grid control-grid--two">
+          <div class="control">
+            <label for="fixture-alpha">Fixture alpha (link-following probability)</label>
+            <div class="alpha-row">
+              <input type="range" id="fixture-alpha" name="fixture-alpha" min="0" max="1" step="0.05" value="0.85">
+              <output id="fixture-alpha-value" class="alpha-value" for="fixture-alpha">0.85</output>
+            </div>
+            <p class="hint">Follow a link with probability alpha; restart with probability 1 − alpha.</p>
+          </div>
+          <div class="control">
+            <label for="fixture-restart">Fixture restart</label>
+            <select id="fixture-restart" name="fixture-restart">
+              <option value="uniform">uniform</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
+        </div>
+        <div class="button-row">
+          <button type="button" id="step-btn">Step one iteration</button>
+          <button type="button" id="reset-steps" class="secondary">Reset</button>
+        </div>
+        <div class="graph-scroll" tabindex="0" role="region" aria-label="Study fixture graph">
+          <svg id="fixture-graph-view" class="graph-view" role="img" aria-label="Four-node teaching graph with nodes A, B, C and D"></svg>
+        </div>
+        <div id="fixture-graph-legend" class="graph-legend"></div>
+        <p class="caption">Click a node to restart there. Changing alpha or restart resets the example to iteration zero.</p>
+      </section>
+      <section class="panel" aria-labelledby="fixture-convergence-heading">
+        <h2 id="fixture-convergence-heading">Fixture calculation</h2>
+        <div id="fixture-convergence-results" role="status" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>LLM4Rec — Recommender Systems course, HSE University. Instructor: Seungmin Jin (sedzhin@hse.ru).</p>
+    <p>The full assignment specification is in <code>readme.md</code> in this directory.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="vendor/d3.min.js"></script>
+  <script src="data.js"></script>
+  <script src="graph.js?v=20261020-auto-study"></script>
+  <script src="script.js?v=20261020-mf-observed-l2"></script>
 </body>
 </html>
